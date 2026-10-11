@@ -1,0 +1,46 @@
+# Local / VPS run:  cp .env.example .env  (edit SESSION_SECRET)  then  docker compose up --build
+# Open http://localhost:8080
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: medcore
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - medcore-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d medcore"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:3000"
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/medcore
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET (32+ random characters) in .env}
+      APP_ORIGIN: ${APP_ORIGIN:-http://localhost:8080}
+      # Plain-HTTP local access needs non-Secure cookies. Remove this line when serving over HTTPS.
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      SEED_DEMO: ${SEED_DEMO:-false}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-}
+      SUBSCRIPTION_ENFORCEMENT: ${SUBSCRIPTION_ENFORCEMENT:-true}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+    volumes:
+      - medcore-uploads:/app/data
+
+volumes:
+  medcore-postgres:
+  medcore-uploads:

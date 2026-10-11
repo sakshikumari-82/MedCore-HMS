@@ -1,0 +1,40 @@
+# Render.com Blueprint — "New > Blueprint" and point it at your Git repository.
+# It creates the PostgreSQL database and the web service, wires them together and generates SESSION_SECRET.
+databases:
+  - name: medcore-db
+    databaseName: medcore
+    plan: free            # free Postgres expires after ~30 days: upgrade before going live with real patients
+
+services:
+  - type: web
+    name: medcore-hms
+    runtime: docker
+    plan: free            # free web services sleep when idle; use a paid plan (and a disk) for production
+    healthCheckPath: /api/healthz
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: medcore-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: APP_ORIGIN
+        sync: false       # e.g. https://medcore-hms.onrender.com (or your custom domain)
+      - key: SUPER_ADMIN_EMAIL
+        sync: false       # your login for the platform-revenue dashboard
+      - key: SUPER_ADMIN_PASSWORD
+        sync: false
+      - key: SEED_DEMO
+        value: "false"    # set "true" + DEMO_PASSWORD only for a public demo
+      - key: SUBSCRIPTION_ENFORCEMENT
+        value: "true"
+      - key: PAYMENT_PROVIDER
+        value: razorpay
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: TZ
+        value: Asia/Kolkata
